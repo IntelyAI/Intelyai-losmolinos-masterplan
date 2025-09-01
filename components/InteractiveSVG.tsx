@@ -20,17 +20,15 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
     }, [selectedLot, lotes]);
 
     return (
-        <div className="relative w-full h-full overflow-hidden">
-            <div className="absolute inset-0 grid place-items-center overflow-hidden">
-                <div
-                    className="absolute inset-0 w-full h-full sm:static sm:w-full sm:h-full"
-                >
+        <div className="relative w-full h-full sm:overflow-hidden">
+            <div className="grid place-items-center sm:absolute sm:inset-0 sm:overflow-hidden">
+                <div className="w-full sm:absolute sm:inset-0 sm:w-full sm:h-full">
                     <object
                         ref={svgRef}
                         type="image/svg+xml"
                         data="/masterplan.svg"
-                        className={`${className ?? ''} sm:max-w-[100vw] sm:max-h-[100vh]`}
-                        style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center center', overflow: 'hidden' }}
+                        className={`${className ?? ''} w-full h-auto sm:h-full sm:max-w-[100vw] sm:max-h-[100vh]`}
+                        style={{ display: 'block', objectFit: 'contain', objectPosition: 'center center', overflow: 'hidden' }}
                     />
                 </div>
             </div>
