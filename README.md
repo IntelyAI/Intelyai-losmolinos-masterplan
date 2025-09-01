@@ -1,36 +1,142 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Masterplan App - Visualizador de Lotes
 
-## Getting Started
+Aplicación web en Next.js 14 + TypeScript para visualizar e interactuar con un masterplan en SVG. Implementa selección de lotes y estilos responsivos, con una arquitectura modular y buenas prácticas.
 
-First, run the development server:
+## 🚀 Características
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Interacciones de lotes**: Delegación de eventos sobre el documento SVG embebido (click)
+- **Selección**: Estado de selección sincronizado y clase `.selected` aplicada dinámicamente
+- **Estilos inyectados**: CSS insertado dentro del propio documento SVG para hover/selected
+- **Diseño responsive**: Estilos responsivos para diferentes tamaños de pantalla
+- **TypeScript**: Tipado estricto y modularización clara
+- **Tailwind CSS**: Utilidades para layout y UI
+
+## 🛠️ Tecnologías Utilizadas
+
+- **Next.js 14**: Framework de React para aplicaciones web
+- **TypeScript**: Lenguaje tipado para JavaScript
+- **Tailwind CSS**: Framework de CSS utilitario
+> Nota: La versión actual no usa `SVGR` ni `react-zoom-pan-pinch`. El SVG se carga con `<object>` para mantener la independencia del documento SVG y poder inyectar estilos internamente.
+
+## 📦 Instalación
+
+1. **Clona el repositorio**:
+   ```bash
+   git clone <url-del-repositorio>
+   cd masterplan-app
+   ```
+
+2. **Instala las dependencias**:
+   ```bash
+   npm install
+   ```
+
+3. **Ejecuta el servidor de desarrollo**:
+   ```bash
+   npm run dev
+   ```
+
+4. **Abre tu navegador**:
+   Navega a [http://localhost:3000](http://localhost:3000)
+
+## 🎯 Funcionalidades
+
+### Interacciones con Lotes
+
+- **Hover**: Al pasar el mouse sobre un lote, se muestra un tooltip con el número del lote
+- **Click**: Al hacer click en un lote, se selecciona y se resalta con un color azul más fuerte
+- **Cursor**: Los elementos con `data-lot` cambian el cursor a pointer
+
+### Navegación
+
+- **Zoom**: Usa la rueda del mouse para acercar y alejar
+- **Pan**: Arrastra para mover el plano
+- **Límites**: Zoom mínimo 0.5x, máximo 3x
+
+### Estados Visuales
+
+- **Normal**: Color gris claro
+- **Hover**: Azul con transparencia
+- **Seleccionado**: Azul más fuerte
+
+## 📁 Estructura del Proyecto
+
+```
+masterplan-app/
+├── app/
+│   ├── components/
+│   │   └── InteractiveSVG.tsx  # Componente principal para visualizar e interactuar
+│   ├── hooks/
+│   │   └── useEmbeddedSVGInteractions.ts # Hook para manejar interacciones dentro del SVG embebido
+│   ├── globals.css            # Estilos globales y Tailwind
+│   ├── layout.tsx             # Layout principal de la aplicación
+│   └── page.tsx               # Página principal
+├── public/
+│   └── masterplan.svg         # Archivo SVG del masterplan
+├── next.config.js             # Configuración base de Next.js
+├── tailwind.config.ts         # Configuración de Tailwind CSS
+├── package.json               # Dependencias del proyecto
+└── README.md                  # Este archivo
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🔧 Configuración
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+No se requiere configuración especial para SVG. Se utiliza el tag estándar `<object type="image/svg+xml" .../>`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Tailwind CSS
 
-## Learn More
+Los colores personalizados están definidos en `tailwind.config.ts`:
 
-To learn more about Next.js, take a look at the following resources:
+```typescript
+colors: {
+  'lot-hover': 'rgba(59, 130, 246, 0.3)',    // Azul con transparencia
+  'lot-selected': 'rgba(37, 99, 235, 0.8)',  // Azul más fuerte
+}
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📝 Uso del Componente InteractiveSVG
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```typescript
+import InteractiveSVG from './components/InteractiveSVG';
 
-## Deploy on Vercel
+export default function Page() {
+  return (
+    <main className="w-screen h-screen overflow-hidden">
+      <InteractiveSVG />
+    </main>
+  );
+}
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🎨 Personalización
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Agregar Nuevos Lotes
+
+Para que un lote sea interactivo, asegúrate de que el elemento en `public/masterplan.svg` tenga un `id` incluido en `SVG_CONFIG.interactivePaths` (ver `app/config/svgConfig.ts`). Ejemplo:
+
+```svg
+<path id="A12" d="..." />
+```
+
+### Cambiar Colores
+
+Los colores por defecto se inyectan dentro del documento SVG. Puedes ajustar el CSS en el hook `useEmbeddedSVGInteractions` cambiando las reglas de `.lote` y `.lote.selected`.
+
+## 🚀 Scripts Disponibles
+
+- `npm run dev`: Ejecuta el servidor de desarrollo
+- `npm run build`: Construye la aplicación para producción
+- `npm run start`: Ejecuta la aplicación en modo producción
+- `npm run lint`: Ejecuta el linter de ESLint
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT.
+
+## 🤝 Contribuciones
+
+Las contribuciones son bienvenidas. Por favor, abre un issue o un pull request para sugerir mejoras.
+
+## 📞 Soporte
+
+Si tienes alguna pregunta o necesitas ayuda, por favor abre un issue en el repositorio.
