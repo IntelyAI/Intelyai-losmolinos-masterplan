@@ -5,7 +5,7 @@ function generateAllLotIds(): string[] {
         B: 21, // B1 a B21
         C: 21, // C1 a C21
         D: 46, // D1 a D46
-        E: 33, // E1 a E33
+        E: 33, // E1 a E33,
     };
 
     const allIds: string[] = [];
@@ -22,7 +22,7 @@ function generateAllLotIds(): string[] {
 export const SVG_CONFIG = {
     interactivePaths: generateAllLotIds(),
     defaultColor: 'transparent',
-    hoverColor: '#3B82F6',
+    hoverColor: 'rgba(0,0,0,0.25)',
     transitionDuration: '0.3s',
     transitionEasing: 'ease',
 } as const; 

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { SVG_CONFIG } from '@/config/svg';
+import { useLotesEtapa1 } from '@/hooks/useLotes';
 
 export interface UseInteractiveSVGResult {
     svgRef: React.RefObject<HTMLObjectElement>;
@@ -12,12 +13,34 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
     const [selectedLot, setSelectedLot] = useState<string | null>(null);
     const pathsRef = useRef<HTMLElement[]>([]);
 
+    const { data: lotes } = useLotesEtapa1();
+
+    const interactiveIds = useMemo(() => {
+        if (!lotes) return [] as string[];
+        return lotes.map(l => String(l.id));
+    }, [lotes]);
+
     useEffect(() => {
-        const handleSVGLoad = () => {
+        const attachListeners = () => {
             const svgDoc = svgRef.current?.contentDocument;
             if (!svgDoc) return;
 
-            const elementList = SVG_CONFIG.interactivePaths
+            // Limpiar listeners anteriores si los hubiera
+            pathsRef.current.forEach(path => {
+                const listeners = (path as any).__listeners as
+                    | { onMouseEnter: () => void; onMouseLeave: () => void; onClick: () => void }
+                    | undefined;
+                if (listeners) {
+                    path.removeEventListener('mouseenter', listeners.onMouseEnter);
+                    path.removeEventListener('mouseleave', listeners.onMouseLeave);
+                    path.removeEventListener('click', listeners.onClick);
+                }
+            });
+            pathsRef.current = [];
+
+            if (!interactiveIds.length) return;
+
+            const elementList = interactiveIds
                 .map((id: string) => svgDoc.getElementById(id))
                 .filter(Boolean) as HTMLElement[];
 
@@ -55,30 +78,29 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
 
         const objectElement = svgRef.current;
         if (objectElement) {
-            objectElement.addEventListener('load', handleSVGLoad);
+            const onLoad = () => attachListeners();
+            objectElement.addEventListener('load', onLoad);
             if (objectElement.contentDocument) {
-                handleSVGLoad();
+                attachListeners();
             }
+            return () => {
+                objectElement.removeEventListener('load', onLoad);
+                pathsRef.current.forEach(path => {
+                    const listeners = (path as any).__listeners as
+                        | { onMouseEnter: () => void; onMouseLeave: () => void; onClick: () => void }
+                        | undefined;
+                    if (listeners) {
+                        path.removeEventListener('mouseenter', listeners.onMouseEnter);
+                        path.removeEventListener('mouseleave', listeners.onMouseLeave);
+                        path.removeEventListener('click', listeners.onClick);
+                    }
+                });
+                pathsRef.current = [];
+            };
         }
-
-        return () => {
-            if (objectElement) {
-                objectElement.removeEventListener('load', handleSVGLoad);
-            }
-            pathsRef.current.forEach(path => {
-                const listeners = (path as any).__listeners as
-                    | { onMouseEnter: () => void; onMouseLeave: () => void; onClick: () => void }
-                    | undefined;
-                if (listeners) {
-                    path.removeEventListener('mouseenter', listeners.onMouseEnter);
-                    path.removeEventListener('mouseleave', listeners.onMouseLeave);
-                    path.removeEventListener('click', listeners.onClick);
-                }
-            });
-            pathsRef.current = [];
-        };
+        return;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [interactiveIds]);
 
     useEffect(() => {
         pathsRef.current.forEach(p => {
@@ -87,4 +109,4 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
     }, [selectedLot]);
 
     return { svgRef, selectedLot, setSelectedLot };
-} 
+}

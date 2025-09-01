@@ -8,8 +8,6 @@
 }
 
 .lote:hover {
-  fill: rgba(0, 163, 255, 0.35);
-  /* color al pasar */
-  stroke: #00a3ff;
+  fill: rgba(0, 0, 0, 0.3);
   cursor: pointer;
 }
