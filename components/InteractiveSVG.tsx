@@ -3,13 +3,20 @@
 import LotDetails from '@/components/LotDetails';
 import { useInteractiveSVG } from '@/hooks/useInteractiveSVG';
 import { formatLotName } from '@/utils/lot';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useMemo } from 'react';
 
 interface InteractiveSVGProps {
     className?: string;
 }
 
 export default function InteractiveSVG({ className }: InteractiveSVGProps) {
-    const { svgRef, selectedLot, setSelectedLot } = useInteractiveSVG();
+    const { svgRef, selectedLot, setSelectedLot, lotes } = useInteractiveSVG();
+
+    const selectedLotData = useMemo(() => {
+        if (!selectedLot || !lotes) return null;
+        return lotes.find(l => String(l.id) === String(selectedLot)) ?? null;
+    }, [selectedLot, lotes]);
 
     return (
         <div className="relative w-full h-full overflow-hidden">
@@ -23,14 +30,14 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
                 />
             </div>
 
-            {selectedLot && (
-                <div className="absolute bottom-4 right-4 w-full max-w-md z-10">
-                    <LotDetails
-                        lotId={formatLotName(selectedLot)}
-                        onClear={() => setSelectedLot(null)}
-                    />
-                </div>
-            )}
+            <Dialog open={!!selectedLot} onOpenChange={(open) => { if (!open) setSelectedLot(null); }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{selectedLot ? formatLotName(selectedLot) : 'Lote'}</DialogTitle>
+                    </DialogHeader>
+                    <LotDetails lotId={selectedLot ? formatLotName(selectedLot) : undefined} lot={selectedLotData} onClear={() => setSelectedLot(null)} />
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SVG_CONFIG } from '@/config/svg';
 import { useLotesEtapa1 } from '@/hooks/useLotes';
+import type { LoteAPIResponse } from '@/services/lotes';
 
 export interface UseInteractiveSVGResult {
     svgRef: React.RefObject<HTMLObjectElement>;
     selectedLot: string | null;
     setSelectedLot: (lotId: string | null) => void;
+    lotes: LoteAPIResponse[] | null;
 }
 
 export function useInteractiveSVG(): UseInteractiveSVGResult {
@@ -239,5 +241,5 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
         });
     }, [selectedLot, lotes]);
 
-    return { svgRef, selectedLot, setSelectedLot };
+    return { svgRef, selectedLot, setSelectedLot, lotes };
 }
