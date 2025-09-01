@@ -6,6 +6,7 @@ import { formatLotName } from '@/utils/lot';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useMemo } from 'react';
 import { SVG_CONFIG } from '@/config/svg';
+import { useOrientation } from '@/hooks/useOrientation';
 
 interface InteractiveSVGProps {
     className?: string;
@@ -13,6 +14,9 @@ interface InteractiveSVGProps {
 
 export default function InteractiveSVG({ className }: InteractiveSVGProps) {
     const { svgRef, selectedLot, setSelectedLot, lotes } = useInteractiveSVG();
+    const { orientation, isMobile } = useOrientation();
+    const stackLegendVertical = isMobile && orientation === 'landscape';
+    const centerInPortrait = isMobile && orientation === 'portrait';
 
     const selectedLotData = useMemo(() => {
         if (!selectedLot || !lotes) return null;
@@ -20,14 +24,18 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
     }, [selectedLot, lotes]);
 
     return (
-        <div className="relative w-full h-full sm:overflow-hidden">
-            <div className="grid place-items-center sm:absolute sm:inset-0 sm:overflow-hidden">
+        <div
+            className="relative w-full h-full sm:overflow-hidden"
+            data-orientation={orientation}
+            data-mobile={isMobile ? 'true' : 'false'}
+        >
+            <div className="grid place-items-center h-full sm:absolute sm:inset-0 sm:overflow-hidden">
                 <div className="w-full sm:absolute sm:inset-0 sm:w-full sm:h-full">
                     <object
                         ref={svgRef}
                         type="image/svg+xml"
                         data="/masterplan.svg"
-                        className={`${className ?? ''} w-full h-auto sm:h-full sm:max-w-[100vw] sm:max-h-[100vh]`}
+                        className={`${className ?? ''} w-full h-auto ${centerInPortrait ? 'max-h-[100dvh]' : ''} sm:h-full sm:max-w-[100vw] sm:max-h-[100vh]`}
                         style={{ display: 'block', objectFit: 'contain', objectPosition: 'center center', overflow: 'hidden' }}
                     />
                 </div>
@@ -38,7 +46,7 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
                 className="pointer-events-none absolute left-4 bottom-4 sm:left-6 sm:bottom-6"
             >
                 <div className="pointer-events-auto rounded-lg border border-gray-200/80 bg-white/80 backdrop-blur-md shadow-lg dark:border-gray-700/70 dark:bg-slate-900/70">
-                    <div className="flex items-center gap-4 px-4 py-3">
+                    <div className={`${stackLegendVertical ? 'flex flex-col items-start gap-3' : 'flex items-center gap-4'} px-4 py-3`}>
                         {([
                             { key: 'vendido', label: 'Vendido' },
                             { key: 'reservado', label: 'Reservado' },
