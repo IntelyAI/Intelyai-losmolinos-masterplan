@@ -23,7 +23,7 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
         <div className="relative w-full h-full overflow-hidden">
             <div className="absolute inset-0 grid place-items-center overflow-hidden">
                 <div
-                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vh] h-[100vw] rotate-90 sm:static sm:translate-x-0 sm:translate-y-0 sm:w-full sm:h-full sm:rotate-0"
+                    className="absolute inset-0 w-full h-full sm:static sm:w-full sm:h-full"
                 >
                     <object
                         ref={svgRef}
