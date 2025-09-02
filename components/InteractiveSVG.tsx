@@ -36,7 +36,7 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
                         type="image/svg+xml"
                         data="/masterplan.svg"
                         className={`${className ?? ''} w-full h-auto ${centerInPortrait ? 'max-h-[100dvh]' : ''} sm:h-full sm:max-w-[100vw] sm:max-h-[100vh]`}
-                        style={{ display: 'block', objectFit: 'contain', objectPosition: 'center center', overflow: 'hidden' }}
+                        style={{ display: 'block', objectFit: 'contain', objectPosition: 'center center', overflow: 'hidden', touchAction: isMobile ? 'none' : undefined }}
                     />
                 </div>
             </div>

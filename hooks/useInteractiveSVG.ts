@@ -14,6 +14,13 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
     const svgRef = useRef<HTMLObjectElement>(null);
     const [selectedLot, setSelectedLot] = useState<string | null>(null);
     const pathsRef = useRef<HTMLElement[]>([]);
+    // Estado para pinch-zoom/pan en mobile (viewBox)
+    const initialViewBoxRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+    const currentViewBoxRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+    const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+    const lastPinchDistanceRef = useRef<number | null>(null);
+    const lastPanPointRef = useRef<{ x: number; y: number } | null>(null);
+    const gesturesEnabledRef = useRef<boolean>(true);
 
     const { data: lotes } = useLotesEtapa1();
 
@@ -23,6 +30,7 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
     }, [lotes]);
 
     useEffect(() => {
+        let cleanupGestures: (() => void) | null = null;
         const attachListeners = () => {
             const svgDoc = svgRef.current?.contentDocument;
             if (!svgDoc) return;
@@ -96,7 +104,7 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
             ensureInnerStrokeFilters();
 
             // Normalizar atributos del SVG embebido para mantener proporción y centrado
-            const svgRoot = svgDoc.querySelector('svg');
+            const svgRoot = svgDoc.querySelector('svg') as SVGSVGElement | null;
             if (svgRoot) {
                 svgRoot.setAttribute('preserveAspectRatio', 'xMidYMid meet');
                 svgRoot.removeAttribute('width');
@@ -107,6 +115,113 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
                 const bgImage = svgRoot.querySelector('image');
                 if (bgImage) {
                     bgImage.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                }
+
+                // Configurar viewBox inicial para zoom/pan en mobile
+                const vb = svgRoot.getAttribute('viewBox');
+                if (vb) {
+                    const [vx, vy, vw, vh] = vb.split(/\s+/).map(Number);
+                    if (!initialViewBoxRef.current) {
+                        initialViewBoxRef.current = { x: vx, y: vy, w: vw, h: vh };
+                    }
+                    currentViewBoxRef.current = { x: vx, y: vy, w: vw, h: vh };
+                }
+
+                const isMobile = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+                if (isMobile) {
+                    // Evitar que el navegador capture el pinch (que lo capture el SVG)
+                    (svgRoot.style as any).touchAction = 'none';
+
+                    const toSvgPoint = (clientX: number, clientY: number) => {
+                        const pt = svgRoot.createSVGPoint();
+                        pt.x = clientX;
+                        pt.y = clientY;
+                        const ctm = svgRoot.getScreenCTM();
+                        if (!ctm) return { x: clientX, y: clientY };
+                        const sp = pt.matrixTransform(ctm.inverse());
+                        return { x: sp.x, y: sp.y };
+                    };
+
+                    const applyViewBox = (vbObj: { x: number; y: number; w: number; h: number }) => {
+                        currentViewBoxRef.current = vbObj;
+                        svgRoot.setAttribute('viewBox', `${vbObj.x} ${vbObj.y} ${vbObj.w} ${vbObj.h}`);
+                    };
+
+                    const onPointerDown = (ev: PointerEvent) => {
+                        if (!gesturesEnabledRef.current) return;
+                        (ev.target as Element).setPointerCapture?.(ev.pointerId);
+                        const p = toSvgPoint(ev.clientX, ev.clientY);
+                        pointersRef.current.set(ev.pointerId, p);
+                        if (pointersRef.current.size === 1) {
+                            lastPanPointRef.current = p;
+                        }
+                    };
+
+                    const onPointerMove = (ev: PointerEvent) => {
+                        if (!gesturesEnabledRef.current) return;
+                        if (!currentViewBoxRef.current) return;
+                        if (!pointersRef.current.has(ev.pointerId)) return;
+                        const p = toSvgPoint(ev.clientX, ev.clientY);
+                        pointersRef.current.set(ev.pointerId, p);
+
+                        const pts = Array.from(pointersRef.current.values());
+                        if (pts.length === 2) {
+                            // Pinch (zoom alrededor del centro de los dedos)
+                            const [p1, p2] = pts;
+                            const dx = p2.x - p1.x;
+                            const dy = p2.y - p1.y;
+                            const distance = Math.hypot(dx, dy);
+                            const prevDistance = lastPinchDistanceRef.current ?? distance;
+                            const vbCur = currentViewBoxRef.current;
+                            const initial = initialViewBoxRef.current ?? vbCur;
+                            if (!initial || !vbCur) return;
+                            let scaleFactor = distance / (prevDistance || distance);
+                            // Escala acumulada, clamp 1x..8x
+                            const currentScale = initial.w / vbCur.w;
+                            let targetScale = Math.max(1, Math.min(8, currentScale * scaleFactor));
+                            const newW = initial.w / targetScale;
+                            const newH = initial.h / targetScale;
+                            const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+                            const newX = center.x - (center.x - vbCur.x) * (newW / vbCur.w);
+                            const newY = center.y - (center.y - vbCur.y) * (newH / vbCur.h);
+                            applyViewBox({ x: newX, y: newY, w: newW, h: newH });
+                            lastPinchDistanceRef.current = distance;
+                            lastPanPointRef.current = null;
+                        } else if (pts.length === 1) {
+                            // Pan
+                            const vbCur = currentViewBoxRef.current;
+                            const last = lastPanPointRef.current;
+                            const cur = pts[0];
+                            if (vbCur && last) {
+                                const dx = cur.x - last.x;
+                                const dy = cur.y - last.y;
+                                applyViewBox({ x: vbCur.x - dx, y: vbCur.y - dy, w: vbCur.w, h: vbCur.h });
+                            }
+                            lastPanPointRef.current = cur;
+                        }
+                    };
+
+                    const onPointerUpOrCancel = (ev: PointerEvent) => {
+                        pointersRef.current.delete(ev.pointerId);
+                        if (pointersRef.current.size < 2) {
+                            lastPinchDistanceRef.current = null;
+                        }
+                        if (pointersRef.current.size === 0) {
+                            lastPanPointRef.current = null;
+                        }
+                    };
+
+                    svgRoot.addEventListener('pointerdown', onPointerDown);
+                    svgRoot.addEventListener('pointermove', onPointerMove);
+                    svgRoot.addEventListener('pointerup', onPointerUpOrCancel);
+                    svgRoot.addEventListener('pointercancel', onPointerUpOrCancel);
+
+                    cleanupGestures = () => {
+                        svgRoot.removeEventListener('pointerdown', onPointerDown);
+                        svgRoot.removeEventListener('pointermove', onPointerMove);
+                        svgRoot.removeEventListener('pointerup', onPointerUpOrCancel);
+                        svgRoot.removeEventListener('pointercancel', onPointerUpOrCancel);
+                    };
                 }
             }
 
@@ -179,6 +294,18 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
                 };
 
                 const onClick = () => {
+                    // En mobile: resetear zoom/pan a 1x antes de abrir modal
+                    try {
+                        const isMobile = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+                        const svgRootEl = svgRef.current?.contentDocument?.querySelector('svg') as SVGSVGElement | null;
+                        if (isMobile && svgRootEl && initialViewBoxRef.current) {
+                            const vb0 = initialViewBoxRef.current;
+                            svgRootEl.setAttribute('viewBox', `${vb0.x} ${vb0.y} ${vb0.w} ${vb0.h}`);
+                            currentViewBoxRef.current = { ...vb0 };
+                            lastPanPointRef.current = null;
+                            lastPinchDistanceRef.current = null;
+                        }
+                    } catch { }
                     setSelectedLot(lotId);
                     // El color fill de selección se gestiona en el efecto de selectedLot
                 };
@@ -200,6 +327,10 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
             }
             return () => {
                 objectElement.removeEventListener('load', onLoad);
+                if (cleanupGestures) {
+                    try { cleanupGestures(); } catch { }
+                    cleanupGestures = null;
+                }
                 pathsRef.current.forEach(path => {
                     const listeners = (path as any).__listeners as
                         | { onMouseEnter: () => void; onMouseLeave: () => void; onClick: () => void }
@@ -240,6 +371,11 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
             }
         });
     }, [selectedLot, lotes]);
+
+    // Bloquear gestos cuando el modal esté abierto
+    useEffect(() => {
+        gesturesEnabledRef.current = !selectedLot;
+    }, [selectedLot]);
 
     return { svgRef, selectedLot, setSelectedLot, lotes };
 }
