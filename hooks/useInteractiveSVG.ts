@@ -347,40 +347,6 @@ export function useInteractiveSVG(allowAnimate: boolean = true): UseInteractiveS
 
             // Listo para mostrar el SVG sin flash
             setIsSvgReady(true);
-
-            // Disparar aparición escalonada de lotes sincronizada con la aparición del masterplan
-            const baseDelayMs = 120;
-            const stepDelayMs = 22;
-            const hasLotes = Array.isArray(lotes) && lotes.length > 0;
-            if (hasLotes) {
-                // Orden natural por manzana (letra) y número ascendente
-                const parseId = (id: string) => ({ letter: id.charAt(0).toUpperCase(), num: parseInt(id.slice(1), 10) || 0 });
-                const sorted = [...pathsRef.current].sort((a, b) => {
-                    const pa = parseId(a.id);
-                    const pb = parseId(b.id);
-                    if (pa.letter < pb.letter) return -1;
-                    if (pa.letter > pb.letter) return 1;
-                    return pa.num - pb.num;
-                });
-                requestAnimationFrame(() => {
-                    sorted.forEach((p, idx) => {
-                        if (!(p as any).__appeared) {
-                            const delay = Math.min(700, baseDelayMs + idx * stepDelayMs);
-                            setTimeout(() => {
-                                try {
-                                    p.style.opacity = '1';
-                                    p.style.transform = 'scale(1)';
-                                    p.style.filter = 'blur(0px)';
-                                    const desired = (p as any).__baseColor as string | undefined;
-                                    p.style.fill = desired ?? 'none';
-                                    (p.style as any).fillOpacity = '1';
-                                    (p as any).__appeared = true;
-                                } catch { }
-                            }, delay);
-                        }
-                    });
-                });
-            }
         };
 
         const objectElement = svgRef.current;
@@ -417,6 +383,42 @@ export function useInteractiveSVG(allowAnimate: boolean = true): UseInteractiveS
         return;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [interactiveIds, lotes]);
+
+    // Disparar la aparición escalonada cuando: SVG listo, hay lotes y allowAnimate=true
+    useEffect(() => {
+        if (!isSvgReady) return;
+        if (!allowAnimate) return;
+        if (!lotes || lotes.length === 0) return;
+
+        const baseDelayMs = 120;
+        const stepDelayMs = 22;
+        const parseId = (id: string) => ({ letter: id.charAt(0).toUpperCase(), num: parseInt(id.slice(1), 10) || 0 });
+        const sorted = [...pathsRef.current].sort((a, b) => {
+            const pa = parseId(a.id);
+            const pb = parseId(b.id);
+            if (pa.letter < pb.letter) return -1;
+            if (pa.letter > pb.letter) return 1;
+            return pa.num - pb.num;
+        });
+
+        requestAnimationFrame(() => {
+            sorted.forEach((p, idx) => {
+                if ((p as any).__appeared) return;
+                const delay = Math.min(700, baseDelayMs + idx * stepDelayMs);
+                setTimeout(() => {
+                    try {
+                        p.style.opacity = '1';
+                        p.style.transform = 'scale(1)';
+                        p.style.filter = 'blur(0px)';
+                        const desired = (p as any).__baseColor as string | undefined;
+                        p.style.fill = desired ?? 'none';
+                        (p.style as any).fillOpacity = '1';
+                        (p as any).__appeared = true;
+                    } catch { }
+                }, delay);
+            });
+        });
+    }, [isSvgReady, allowAnimate, lotes]);
 
     useEffect(() => {
         pathsRef.current.forEach(p => {
