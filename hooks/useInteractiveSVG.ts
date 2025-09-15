@@ -267,7 +267,9 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
                 path.style.transition = `fill ${SVG_CONFIG.transitionDuration} ${SVG_CONFIG.transitionEasing}, opacity 300ms ease, transform 450ms ease, filter 400ms ease`;
                 path.style.cursor = 'pointer';
                 path.style.pointerEvents = 'all';
-                path.style.fill = baseColor;
+                // Guardar color objetivo y partir de transparente para evitar flash
+                (path as any).__baseColor = baseColor;
+                path.style.fill = 'none';
                 // Usamos filtro para borde interno; quitamos stroke para evitar doble borde
                 path.style.stroke = 'transparent';
                 path.style.strokeWidth = '0';
@@ -288,6 +290,7 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
                 }
 
                 const onMouseEnter = () => {
+                    if (!(path as any).__appeared) return;
                     if (selectedLot !== lotId) {
                         path.style.fill = SVG_CONFIG.hoverColor;
                         // Mantiene filtro de borde interno
@@ -295,6 +298,7 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
                 };
 
                 const onMouseLeave = () => {
+                    if (!(path as any).__appeared) return;
                     if (selectedLot !== lotId) {
                         const currentLot = lotes?.find(l => String(l.id) === lotId);
                         const currentColor = currentLot
@@ -351,6 +355,8 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
                                 p.style.opacity = '1';
                                 p.style.transform = 'scale(1)';
                                 p.style.filter = 'blur(0px)';
+                                const desired = (p as any).__baseColor as string | undefined;
+                                p.style.fill = desired ?? 'none';
                                 (p as any).__appeared = true;
                             } catch { }
                         }, delay);
@@ -397,6 +403,8 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
     useEffect(() => {
         pathsRef.current.forEach(p => {
             const lotData = lotes?.find(l => String(l.id) === p.id);
+            // Si el lote aún no apareció, no forzar color para evitar flash; se aplicará en la aparición
+            if (!(p as any).__appeared) return;
             if (p.id === selectedLot) {
                 p.style.fill = SVG_CONFIG.selectedColor;
             } else {
