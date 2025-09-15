@@ -2,17 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { LoteAPIResponse } from '@/services/lotes';
-import { formatLotName } from '@/utils/lot';
 
 interface LotDetailsProps {
-    lotId?: string;
     lot?: LoteAPIResponse | null;
-    onClear: () => void;
 }
 
-export default function LotDetails({ lotId, lot, onClear }: LotDetailsProps) {
-    const resolvedId = lotId ?? (lot ? formatLotName(String(lot.id)) : '');
-    const estado = lot?.estado;
+export default function LotDetails({ lot }: LotDetailsProps) {
 
     // Imagen para Manzana A: mapea A1 -> /Manzana A/F-A-01.jpg
     const rawId = lot?.id ? String(lot.id) : null;
@@ -33,7 +28,7 @@ export default function LotDetails({ lotId, lot, onClear }: LotDetailsProps) {
         setImgError(false);
     }, [imageUrl]);
 
-    const extraEntries = Object.entries(lot ?? {}).filter(([key]) => key !== 'id' && key !== 'estado');
+    // No mostramos metadata cuando hay imagen; si en el futuro se necesita, se puede reactivar
 
     return (
         <div className="bg-white p-0 rounded-lg shadow-lg border border-gray-200 overflow-hidden max-w-[90vw] max-h-[90dvh]">

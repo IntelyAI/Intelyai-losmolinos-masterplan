@@ -3,7 +3,7 @@
 import LotDetails from '@/components/LotDetails';
 import { useInteractiveSVG } from '@/hooks/useInteractiveSVG';
 import { formatLotName } from '@/utils/lot';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useMemo } from 'react';
 import { SVG_CONFIG } from '@/config/svg';
 import { useOrientation } from '@/hooks/useOrientation';
@@ -83,7 +83,7 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
 
             <Dialog open={!!selectedLot} onOpenChange={(open) => { if (!open) setSelectedLot(null); }}>
                 <DialogContent className="p-0 w-auto max-w-none h-auto max-h-[90dvh]">
-                    <LotDetails lotId={selectedLot ? formatLotName(selectedLot) : undefined} lot={selectedLotData} onClear={() => setSelectedLot(null)} />
+                    <LotDetails lot={selectedLotData} />
                 </DialogContent>
             </Dialog>
         </div>
