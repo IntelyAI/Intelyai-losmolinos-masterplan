@@ -2,7 +2,6 @@
 
 import LotDetails from '@/components/LotDetails';
 import { useInteractiveSVG } from '@/hooks/useInteractiveSVG';
-import { formatLotName } from '@/utils/lot';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useMemo } from 'react';
 import { SVG_CONFIG } from '@/config/svg';
