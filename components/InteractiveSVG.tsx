@@ -47,7 +47,7 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
             <div className="grid place-items-center h-full sm:absolute sm:inset-0 sm:overflow-hidden">
                 <div className="w-full sm:absolute sm:inset-0 sm:w-full sm:h-full">
                     {introVisible && (
-                        <div className={`absolute inset-0 z-10 grid place-items-center transition-opacity duration-500 ${introFading ? 'opacity-0' : 'opacity-100'}`}>
+                        <div className={`absolute inset-0 z-10 grid place-items-center transition-opacity duration-500 ${introFading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
                             <div className="relative w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
                                 <div className="absolute inset-0 grid place-items-center">
                                     <div className="flex flex-col items-center">
