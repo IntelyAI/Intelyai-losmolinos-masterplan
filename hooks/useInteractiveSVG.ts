@@ -8,12 +8,14 @@ export interface UseInteractiveSVGResult {
     selectedLot: string | null;
     setSelectedLot: (lotId: string | null) => void;
     lotes: LoteAPIResponse[] | null;
+    isSvgReady: boolean;
 }
 
 export function useInteractiveSVG(): UseInteractiveSVGResult {
     const svgRef = useRef<HTMLObjectElement>(null);
     const [selectedLot, setSelectedLot] = useState<string | null>(null);
     const pathsRef = useRef<HTMLElement[]>([]);
+    const [isSvgReady, setIsSvgReady] = useState<boolean>(false);
     // Estado para pinch-zoom/pan en mobile (viewBox)
     const initialViewBoxRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
     const currentViewBoxRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -44,6 +46,14 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
                     defs = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'defs') as SVGDefsElement;
                     defs.setAttribute('id', 'interactive-defs');
                     svgRoot.insertBefore(defs, svgRoot.firstChild);
+                }
+
+                // Estilo base para prevenir flash negro: shapes transparentes por defecto
+                if (!svgDoc.getElementById('interactive-base-style')) {
+                    const style = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'style');
+                    style.setAttribute('id', 'interactive-base-style');
+                    style.textContent = `polygon, path, rect, circle, ellipse, polyline { fill: none; }`;
+                    defs!.appendChild(style);
                 }
 
                 const createFilter = (id: string, color: string, radiusPx: number) => {
@@ -254,18 +264,27 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
                     : 'none';
                 const baseStroke = lotData ? (SVG_CONFIG.stateStrokeColorByStatus[`${lotData.estado}`] ?? 'transparent') : 'transparent';
 
-                path.style.transition = `fill ${SVG_CONFIG.transitionDuration} ${SVG_CONFIG.transitionEasing}`;
+                path.style.transition = `fill ${SVG_CONFIG.transitionDuration} ${SVG_CONFIG.transitionEasing}, opacity 300ms ease, transform 450ms ease, filter 400ms ease`;
                 path.style.cursor = 'pointer';
                 path.style.pointerEvents = 'all';
                 path.style.fill = baseColor;
                 // Usamos filtro para borde interno; quitamos stroke para evitar doble borde
                 path.style.stroke = 'transparent';
                 path.style.strokeWidth = '0';
+                (path.style as any).transformOrigin = '50% 50%';
                 if (lotData && lotData.estado !== 'libre') {
                     const filterId = `inner-stroke-${lotData.estado}`;
                     path.setAttribute('filter', `url(#${filterId})`);
                 } else {
                     path.removeAttribute('filter');
+                }
+
+                // Preparar aparición inicial (solo 1 vez por lote). No disparamos aún, lo haremos escalonado abajo
+                if (!(path as any).__appeared && !(path as any).__appearanceInitialized) {
+                    path.style.opacity = '0';
+                    path.style.transform = 'scale(0.985)';
+                    path.style.filter = 'blur(0.6px)';
+                    (path as any).__appearanceInitialized = true;
                 }
 
                 const onMouseEnter = () => {
@@ -316,13 +335,39 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
 
                 (path as any).__listeners = { onMouseEnter, onMouseLeave, onClick };
             });
+
+            // Listo para mostrar el SVG sin flash
+            setIsSvgReady(true);
+
+            // Disparar aparición escalonada de lotes sincronizada con la aparición del masterplan
+            const baseDelayMs = 80;
+            const stepDelayMs = 12;
+            requestAnimationFrame(() => {
+                pathsRef.current.forEach((p, idx) => {
+                    if (!(p as any).__appeared) {
+                        const delay = Math.min(420, baseDelayMs + idx * stepDelayMs);
+                        setTimeout(() => {
+                            try {
+                                p.style.opacity = '1';
+                                p.style.transform = 'scale(1)';
+                                p.style.filter = 'blur(0px)';
+                                (p as any).__appeared = true;
+                            } catch { }
+                        }, delay);
+                    }
+                });
+            });
         };
 
         const objectElement = svgRef.current;
         if (objectElement) {
-            const onLoad = () => attachListeners();
+            const onLoad = () => {
+                setIsSvgReady(false);
+                attachListeners();
+            };
             objectElement.addEventListener('load', onLoad);
             if (objectElement.contentDocument) {
+                setIsSvgReady(false);
                 attachListeners();
             }
             return () => {
@@ -342,6 +387,7 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
                     }
                 });
                 pathsRef.current = [];
+                setIsSvgReady(false);
             };
         }
         return;
@@ -377,5 +423,5 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
         gesturesEnabledRef.current = !selectedLot;
     }, [selectedLot]);
 
-    return { svgRef, selectedLot, setSelectedLot, lotes };
+    return { svgRef, selectedLot, setSelectedLot, lotes, isSvgReady };
 }

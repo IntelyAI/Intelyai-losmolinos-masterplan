@@ -13,7 +13,7 @@ interface InteractiveSVGProps {
 }
 
 export default function InteractiveSVG({ className }: InteractiveSVGProps) {
-    const { svgRef, selectedLot, setSelectedLot, lotes } = useInteractiveSVG();
+    const { svgRef, selectedLot, setSelectedLot, lotes, isSvgReady } = useInteractiveSVG();
     const { orientation, isMobile } = useOrientation();
     const stackLegendVertical = isMobile && orientation === 'landscape';
     const centerInPortrait = isMobile && orientation === 'portrait';
@@ -31,12 +31,17 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
         >
             <div className="grid place-items-center h-full sm:absolute sm:inset-0 sm:overflow-hidden">
                 <div className="w-full sm:absolute sm:inset-0 sm:w-full sm:h-full">
+                    {!isSvgReady && (
+                        <div className="absolute inset-0 z-10">
+                            <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 animate-pulse" />
+                        </div>
+                    )}
                     <object
                         ref={svgRef}
                         type="image/svg+xml"
                         data="/masterplan.svg"
-                        className={`${className ?? ''} w-full h-auto ${centerInPortrait ? 'max-h-[100dvh]' : ''} sm:h-full sm:max-w-[100vw] sm:max-h-[100vh]`}
-                        style={{ display: 'block', objectFit: 'contain', objectPosition: 'center center', overflow: 'hidden', touchAction: isMobile ? 'none' : undefined }}
+                        className={`${className ?? ''} w-full h-auto ${centerInPortrait ? 'max-h-[100dvh]' : ''} sm:h-full sm:max-w-[100vw] sm:max-h-[100vh] ${isSvgReady ? 'opacity-100' : 'opacity-0'}`}
+                        style={{ display: 'block', objectFit: 'contain', objectPosition: 'center center', overflow: 'hidden', touchAction: isMobile ? 'none' : undefined, transition: 'opacity 300ms ease, transform 500ms ease, filter 400ms ease', transform: isMobile ? undefined : (isSvgReady ? 'scale(1)' : 'scale(0.985)'), filter: isSvgReady ? 'blur(0px)' : 'blur(1px)' }}
                     />
                 </div>
             </div>
@@ -77,10 +82,7 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
             </div>
 
             <Dialog open={!!selectedLot} onOpenChange={(open) => { if (!open) setSelectedLot(null); }}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{selectedLot ? formatLotName(selectedLot) : 'Lote'}</DialogTitle>
-                    </DialogHeader>
+                <DialogContent className="p-0 w-auto max-w-none h-auto max-h-[90dvh]">
                     <LotDetails lotId={selectedLot ? formatLotName(selectedLot) : undefined} lot={selectedLotData} onClear={() => setSelectedLot(null)} />
                 </DialogContent>
             </Dialog>
