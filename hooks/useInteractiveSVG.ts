@@ -11,11 +11,12 @@ export interface UseInteractiveSVGResult {
     isSvgReady: boolean;
 }
 
-export function useInteractiveSVG(): UseInteractiveSVGResult {
+export function useInteractiveSVG(allowAnimate: boolean = true): UseInteractiveSVGResult {
     const svgRef = useRef<HTMLObjectElement>(null);
     const [selectedLot, setSelectedLot] = useState<string | null>(null);
     const pathsRef = useRef<HTMLElement[]>([]);
     const [isSvgReady, setIsSvgReady] = useState<boolean>(false);
+    const animationScheduledRef = useRef<boolean>(false);
     // Estado para pinch-zoom/pan en mobile (viewBox)
     const initialViewBoxRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
     const currentViewBoxRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -264,12 +265,14 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
                     : 'none';
                 const baseStroke = lotData ? (SVG_CONFIG.stateStrokeColorByStatus[`${lotData.estado}`] ?? 'transparent') : 'transparent';
 
-                path.style.transition = `fill ${SVG_CONFIG.transitionDuration} ${SVG_CONFIG.transitionEasing}, opacity 300ms ease, transform 450ms ease, filter 400ms ease`;
+                // Transiciones más suaves y premium
+                path.style.transition = `fill ${SVG_CONFIG.transitionDuration} ${SVG_CONFIG.transitionEasing}, fill-opacity 520ms cubic-bezier(.22,1,.36,1), opacity 360ms ease, transform 600ms cubic-bezier(.22,1,.36,1), filter 450ms ease`;
                 path.style.cursor = 'pointer';
                 path.style.pointerEvents = 'all';
-                // Guardar color objetivo y partir de transparente para evitar flash
+                // Guardar color objetivo y preparar con fillOpacity 0 para evitar flash
                 (path as any).__baseColor = baseColor;
-                path.style.fill = 'none';
+                path.style.fill = baseColor;
+                (path.style as any).fillOpacity = '0';
                 // Usamos filtro para borde interno; quitamos stroke para evitar doble borde
                 path.style.stroke = 'transparent';
                 path.style.strokeWidth = '0';
@@ -288,6 +291,8 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
                     path.style.filter = 'blur(0.6px)';
                     (path as any).__appearanceInitialized = true;
                 }
+
+                // No calculamos retraso radial: la cascada será por manzana y número
 
                 const onMouseEnter = () => {
                     if (!(path as any).__appeared) return;
@@ -344,25 +349,38 @@ export function useInteractiveSVG(): UseInteractiveSVGResult {
             setIsSvgReady(true);
 
             // Disparar aparición escalonada de lotes sincronizada con la aparición del masterplan
-            const baseDelayMs = 80;
-            const stepDelayMs = 12;
-            requestAnimationFrame(() => {
-                pathsRef.current.forEach((p, idx) => {
-                    if (!(p as any).__appeared) {
-                        const delay = Math.min(420, baseDelayMs + idx * stepDelayMs);
-                        setTimeout(() => {
-                            try {
-                                p.style.opacity = '1';
-                                p.style.transform = 'scale(1)';
-                                p.style.filter = 'blur(0px)';
-                                const desired = (p as any).__baseColor as string | undefined;
-                                p.style.fill = desired ?? 'none';
-                                (p as any).__appeared = true;
-                            } catch { }
-                        }, delay);
-                    }
+            const baseDelayMs = 120;
+            const stepDelayMs = 22;
+            const hasLotes = Array.isArray(lotes) && lotes.length > 0;
+            if (hasLotes) {
+                // Orden natural por manzana (letra) y número ascendente
+                const parseId = (id: string) => ({ letter: id.charAt(0).toUpperCase(), num: parseInt(id.slice(1), 10) || 0 });
+                const sorted = [...pathsRef.current].sort((a, b) => {
+                    const pa = parseId(a.id);
+                    const pb = parseId(b.id);
+                    if (pa.letter < pb.letter) return -1;
+                    if (pa.letter > pb.letter) return 1;
+                    return pa.num - pb.num;
                 });
-            });
+                requestAnimationFrame(() => {
+                    sorted.forEach((p, idx) => {
+                        if (!(p as any).__appeared) {
+                            const delay = Math.min(700, baseDelayMs + idx * stepDelayMs);
+                            setTimeout(() => {
+                                try {
+                                    p.style.opacity = '1';
+                                    p.style.transform = 'scale(1)';
+                                    p.style.filter = 'blur(0px)';
+                                    const desired = (p as any).__baseColor as string | undefined;
+                                    p.style.fill = desired ?? 'none';
+                                    (p.style as any).fillOpacity = '1';
+                                    (p as any).__appeared = true;
+                                } catch { }
+                            }, delay);
+                        }
+                    });
+                });
+            }
         };
 
         const objectElement = svgRef.current;

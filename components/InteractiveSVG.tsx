@@ -31,8 +31,21 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
             <div className="grid place-items-center h-full sm:absolute sm:inset-0 sm:overflow-hidden">
                 <div className="w-full sm:absolute sm:inset-0 sm:w-full sm:h-full">
                     {!isSvgReady && (
-                        <div className="absolute inset-0 z-10">
-                            <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 animate-pulse" />
+                        <div className="absolute inset-0 z-10 grid place-items-center">
+                            <div className="relative w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                                <div className="absolute inset-0 grid place-items-center">
+                                    <div className="flex flex-col items-center">
+                                        <img
+                                            src="/logo-los-molinos.png"
+                                            alt="Los Molinos"
+                                            className="opacity-90 h-auto w-[45vw] max-w-[420px] min-w-[180px]"
+                                        />
+                                        <div className="mt-6 h-1 w-[60vw] max-w-[560px] min-w-[220px] overflow-hidden rounded bg-slate-300/60 dark:bg-slate-700/60">
+                                            <div className="h-full w-0 animate-[progress_1.6s_cubic-bezier(.22,1,.36,1)_forwards] bg-slate-700/80 dark:bg-slate-200/80" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
                     <object
@@ -40,7 +53,7 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
                         type="image/svg+xml"
                         data="/masterplan.svg"
                         className={`${className ?? ''} w-full h-auto ${centerInPortrait ? 'max-h-[100dvh]' : ''} sm:h-full sm:max-w-[100vw] sm:max-h-[100vh] ${isSvgReady ? 'opacity-100' : 'opacity-0'}`}
-                        style={{ display: 'block', objectFit: 'contain', objectPosition: 'center center', overflow: 'hidden', touchAction: isMobile ? 'none' : undefined, transition: 'opacity 300ms ease, transform 500ms ease, filter 400ms ease', transform: isMobile ? undefined : (isSvgReady ? 'scale(1)' : 'scale(0.985)'), filter: isSvgReady ? 'blur(0px)' : 'blur(1px)' }}
+                        style={{ display: 'block', objectFit: 'contain', objectPosition: 'center center', overflow: 'hidden', touchAction: isMobile ? 'none' : undefined, transition: 'opacity 380ms ease, transform 640ms cubic-bezier(.22,1,.36,1), filter 460ms ease', transform: isMobile ? undefined : (isSvgReady ? 'scale(1)' : 'scale(0.985)'), filter: isSvgReady ? 'blur(0px)' : 'blur(1px)' }}
                     />
                 </div>
             </div>
