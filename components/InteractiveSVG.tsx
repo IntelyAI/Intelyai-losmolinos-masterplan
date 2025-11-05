@@ -46,14 +46,16 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
             await new Promise<void>((resolve) => {
                 const img = new Image();
                 img.onload = () => {
+                    const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
                     const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
+                    canvas.width = width * dpr;
+                    canvas.height = height * dpr;
                     const ctx = canvas.getContext('2d');
                     if (!ctx) return resolve();
+                    ctx.scale(dpr, dpr);
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // Dibujar leyenda (bottom-left)
+                    // Dibujar leyenda (panel unificado bottom-left)
                     try {
                         const items = [
                             { key: 'vendido', label: 'Vendido' },
@@ -61,38 +63,49 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
                             { key: 'guardado', label: 'Guardado' },
                             { key: 'libre', label: 'Libre' },
                         ] as const;
-                        const padding = 16; const gap = 10; const box = 12;
-                        ctx.font = '12px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+                        const padding = 16; const gap = 14; const box = 12; const textPad = 8;
+                        ctx.font = '13px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
                         ctx.textBaseline = 'middle';
-                        let x = padding; let y = height - padding - box;
-                        items.forEach(({ key, label }, idx) => {
+                        // medir ancho total
+                        let totalW = 0;
+                        items.forEach(({ label }, i) => {
+                            const w = box + textPad + ctx.measureText(label).width + (i < items.length - 1 ? gap : 0);
+                            totalW += w;
+                        });
+                        const panelH = box + 12;
+                        const panelW = totalW + 16;
+                        const panelX = padding;
+                        const panelY = height - padding - panelH;
+                        // fondo unificado
+                        ctx.fillStyle = 'rgba(255,255,255,0.88)';
+                        ctx.fillRect(panelX, panelY, panelW, panelH);
+                        // contenido
+                        let x = panelX + 8;
+                        const y = panelY + panelH / 2;
+                        items.forEach(({ key, label }) => {
                             const fill = key === 'libre' ? '#ffffff' : (SVG_CONFIG.stateColorByStatus[key] ?? 'transparent');
                             const stroke = key === 'libre' ? 'rgba(100,116,139,0.6)' : (SVG_CONFIG.stateStrokeColorByStatus[key] ?? 'transparent');
-                            // fondo para legibilidad
-                            ctx.fillStyle = 'rgba(255,255,255,0.75)';
-                            ctx.fillRect(x - 6, y - 4, 110, box + 8);
-                            // color
                             ctx.fillStyle = fill;
-                            ctx.fillRect(x, y, box, box);
-                            ctx.strokeStyle = stroke;
-                            ctx.lineWidth = 1;
-                            ctx.strokeRect(x, y, box, box);
+                            ctx.fillRect(x, y - box / 2, box, box);
+                            ctx.strokeStyle = stroke; ctx.lineWidth = 1;
+                            ctx.strokeRect(x, y - box / 2, box, box);
+                            x += box + textPad;
                             ctx.fillStyle = '#0f172a';
-                            ctx.fillText(label, x + box + 8, y + box / 2);
-                            x += 120;
+                            ctx.fillText(label, x, y);
+                            x += ctx.measureText(label).width + gap;
                         });
 
                         // Fecha (bottom-right)
                         const dateStr = `Fecha: ${formatDate(new Date())}`;
-                        ctx.font = '12px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+                        ctx.font = '13px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
                         ctx.textBaseline = 'middle';
                         const textW = ctx.measureText(dateStr).width;
-                        const bx = width - padding - textW - 12;
-                        const by = height - padding - box;
-                        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-                        ctx.fillRect(bx - 6, by - 4, textW + 12, box + 8);
+                        const bx = width - padding - textW - 16;
+                        const by = height - padding - (box + 12);
+                        ctx.fillStyle = 'rgba(255,255,255,0.92)';
+                        ctx.fillRect(bx - 8, by - 6, textW + 16, box + 16);
                         ctx.fillStyle = '#0f172a';
-                        ctx.fillText(dateStr, bx, by + box / 2);
+                        ctx.fillText(dateStr, bx, by + (box + 12) / 2);
                     } catch { }
 
                     canvas.toBlob((blob) => {

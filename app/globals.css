@@ -58,11 +58,14 @@ body {
     print-color-adjust: exact;
     color-adjust: exact;
   }
+
   .no-print,
   [data-role="intro-overlay"] {
     display: none !important;
   }
-  html, body {
+
+  html,
+  body {
     margin: 0;
     padding: 0;
     overflow: visible !important;
