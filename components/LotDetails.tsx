@@ -9,16 +9,19 @@ interface LotDetailsProps {
 
 export default function LotDetails({ lot }: LotDetailsProps) {
 
-    // Imagen para Manzana A: mapea A1 -> /Manzana A/F-A-01.jpg
+    // Imagen para Manzanas A..E: ejemplo A1 -> /Manzana A/F-A-01.jpg, B3 -> /Manzana B/F-B-03.jpg
     const rawId = lot?.id ? String(lot.id) : null;
     let imageUrl: string | null = null;
     let lotNumberLabel: string | null = null;
-    if (rawId && /^A\d+$/i.test(rawId)) {
+    let manzanaLetter: string | null = null;
+    if (rawId && /^[A-E]\d+$/i.test(rawId)) {
+        const letter = rawId.charAt(0).toUpperCase();
         const num = parseInt(rawId.slice(1), 10);
         if (!Number.isNaN(num)) {
             const padded = String(num).padStart(2, '0');
-            imageUrl = encodeURI(`/Manzana A/F-A-${padded}.jpg`);
+            imageUrl = encodeURI(`/Manzana ${letter}/F-${letter}-${padded}.jpg`);
             lotNumberLabel = String(num);
+            manzanaLetter = letter;
         }
     }
 
@@ -35,7 +38,7 @@ export default function LotDetails({ lot }: LotDetailsProps) {
             {imageUrl && !imgError ? (
                 <img
                     src={imageUrl}
-                    alt={`Manzana A - Lote ${lotNumberLabel ?? ''}`}
+                    alt={`Manzana ${manzanaLetter ?? ''} - Lote ${lotNumberLabel ?? ''}`}
                     className="block select-none"
                     style={{ maxWidth: '90vw', maxHeight: '90dvh', width: 'auto', height: 'auto' }}
                     onError={() => setImgError(true)}

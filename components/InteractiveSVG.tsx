@@ -15,10 +15,104 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
     const [introVisible, setIntroVisible] = useState(true);
     const [introFading, setIntroFading] = useState(false);
     const [minTimePassed, setMinTimePassed] = useState(false);
+    const [printDate, setPrintDate] = useState<string>('');
     const { svgRef, selectedLot, setSelectedLot, lotes, isSvgReady } = useInteractiveSVG(introFading);
     const { orientation, isMobile } = useOrientation();
     const stackLegendVertical = isMobile && orientation === 'landscape';
     const centerInPortrait = isMobile && orientation === 'portrait';
+
+    const formatDate = (d: Date) => {
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+    };
+
+    const downloadPNG = async () => {
+        try {
+            const svgDoc = svgRef.current?.contentDocument;
+            const svgEl = svgDoc?.querySelector('svg') as SVGSVGElement | null;
+            if (!svgEl) return;
+            const rect = svgEl.getBoundingClientRect();
+            const width = Math.max(1, Math.floor(rect.width));
+            const height = Math.max(1, Math.floor(rect.height));
+
+            const clone = svgEl.cloneNode(true) as SVGSVGElement;
+            clone.setAttribute('width', String(width));
+            clone.setAttribute('height', String(height));
+            const xml = new XMLSerializer().serializeToString(clone);
+            const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+
+            await new Promise<void>((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) return resolve();
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Dibujar leyenda (bottom-left)
+                    try {
+                        const items = [
+                            { key: 'vendido', label: 'Vendido' },
+                            { key: 'reservado', label: 'Reservado' },
+                            { key: 'guardado', label: 'Guardado' },
+                            { key: 'libre', label: 'Libre' },
+                        ] as const;
+                        const padding = 16; const gap = 10; const box = 12;
+                        ctx.font = '12px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+                        ctx.textBaseline = 'middle';
+                        let x = padding; let y = height - padding - box;
+                        items.forEach(({ key, label }, idx) => {
+                            const fill = key === 'libre' ? '#ffffff' : (SVG_CONFIG.stateColorByStatus[key] ?? 'transparent');
+                            const stroke = key === 'libre' ? 'rgba(100,116,139,0.6)' : (SVG_CONFIG.stateStrokeColorByStatus[key] ?? 'transparent');
+                            // fondo para legibilidad
+                            ctx.fillStyle = 'rgba(255,255,255,0.75)';
+                            ctx.fillRect(x - 6, y - 4, 110, box + 8);
+                            // color
+                            ctx.fillStyle = fill;
+                            ctx.fillRect(x, y, box, box);
+                            ctx.strokeStyle = stroke;
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(x, y, box, box);
+                            ctx.fillStyle = '#0f172a';
+                            ctx.fillText(label, x + box + 8, y + box / 2);
+                            x += 120;
+                        });
+
+                        // Fecha (bottom-right)
+                        const dateStr = `Fecha: ${formatDate(new Date())}`;
+                        ctx.font = '12px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+                        ctx.textBaseline = 'middle';
+                        const textW = ctx.measureText(dateStr).width;
+                        const bx = width - padding - textW - 12;
+                        const by = height - padding - box;
+                        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                        ctx.fillRect(bx - 6, by - 4, textW + 12, box + 8);
+                        ctx.fillStyle = '#0f172a';
+                        ctx.fillText(dateStr, bx, by + box / 2);
+                    } catch { }
+
+                    canvas.toBlob((blob) => {
+                        if (!blob) return resolve();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'masterplan.png';
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                        resolve();
+                    });
+                };
+                img.onerror = () => resolve();
+                img.src = svgDataUrl;
+            });
+        } catch { }
+    };
 
     useEffect(() => {
         const t = setTimeout(() => setMinTimePassed(true), 1600);
@@ -45,9 +139,27 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
             data-mobile={isMobile ? 'true' : 'false'}
         >
             <div className="grid place-items-center h-full sm:absolute sm:inset-0 sm:overflow-hidden">
+                {(introFading || !introVisible) && (
+                    <div className="no-print fixed right-4 top-4 z-20 flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => { try { setPrintDate(formatDate(new Date())); setTimeout(() => window.print(), 50); } catch { } }}
+                            className="inline-flex items-center gap-2 rounded-md bg-slate-900 text-white px-4 py-2 text-sm shadow-md hover:bg-slate-800 active:bg-slate-700 transition-colors"
+                        >
+                            Descargar PDF
+                        </button>
+                        <button
+                            type="button"
+                            onClick={downloadPNG}
+                            className="inline-flex items-center gap-2 rounded-md bg-slate-900 text-white px-4 py-2 text-sm shadow-md hover:bg-slate-800 active:bg-slate-700 transition-colors"
+                        >
+                            Descargar PNG
+                        </button>
+                    </div>
+                )}
                 <div className="w-full sm:absolute sm:inset-0 sm:w-full sm:h-full">
                     {introVisible && (
-                        <div className={`absolute inset-0 z-10 grid place-items-center transition-opacity duration-500 ${introFading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                        <div className={`absolute inset-0 z-10 grid place-items-center transition-opacity duration-500 ${introFading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} data-role="intro-overlay">
                             <div className="relative w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
                                 <div className="absolute inset-0 grid place-items-center">
                                     <div className="flex flex-col items-center">
@@ -77,6 +189,7 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
             {/* Leyenda estados */}
             <div
                 className="pointer-events-none absolute left-4 bottom-4 sm:left-6 sm:bottom-6"
+                data-role="legend"
             >
                 <div className="pointer-events-auto rounded-lg border border-gray-200/80 bg-white/80 backdrop-blur-md shadow-lg dark:border-gray-700/70 dark:bg-slate-900/70">
                     <div className={`${stackLegendVertical ? 'flex flex-col items-start gap-3' : 'flex items-center gap-4'} px-4 py-3`}>
@@ -107,6 +220,11 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
                         })}
                     </div>
                 </div>
+            </div>
+
+            {/* Fecha para impresión */}
+            <div className="hidden print:block fixed right-4 bottom-4 z-10 text-sm bg-white/85 text-slate-900 px-3 py-1 rounded shadow ring-1 ring-slate-200">
+                Fecha: {printDate}
             </div>
 
             <Dialog open={!!selectedLot} onOpenChange={(open) => { if (!open) setSelectedLot(null); }}>

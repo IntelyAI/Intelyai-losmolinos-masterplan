@@ -47,6 +47,28 @@ body {
   overflow: auto;
 }
 
+@page {
+  size: A4 landscape;
+  margin: 0;
+}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color-adjust: exact;
+  }
+  .no-print,
+  [data-role="intro-overlay"] {
+    display: none !important;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: visible !important;
+  }
+}
+
 /* estilos base de los lotes */
 .lote {
   fill: transparent;
