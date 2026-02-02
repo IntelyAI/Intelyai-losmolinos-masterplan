@@ -177,8 +177,8 @@ export default function InteractiveSVG({ className }: InteractiveSVGProps) {
                                 <div className="absolute inset-0 grid place-items-center">
                                     <div className="flex flex-col items-center">
                                         <img
-                                            src="/logo-los-molinos.png"
-                                            alt="Los Molinos"
+                                            src="/logo.png"
+                                            alt="Logo"
                                             className="opacity-95 h-auto w-[48vw] max-w-[520px] min-w-[200px] drop-shadow-[0_6px_18px_rgba(0,0,0,0.25)] animate-[logoIn_700ms_cubic-bezier(.22,1,.36,1)_both]"
                                         />
                                         <div className="mt-6 h-1 w-[60vw] max-w-[640px] min-w-[240px] overflow-hidden rounded bg-slate-300/60 dark:bg-slate-700/60">
